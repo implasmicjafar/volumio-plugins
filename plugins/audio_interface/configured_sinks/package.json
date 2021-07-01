@@ -1,0 +1,21 @@
+{
+	"name": "configured_sinks",
+	"version": "1.0.0",
+	"description": "Allows configuration and use of one or more named audio sinks from alsa hardware.",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"author": "Jafar Jaeger",
+	"license": "ISC",
+	"volumio_info": {
+		"prettyName": "Configured Audio Sinks",
+		"icon": "fa-volume-up",
+		"plugin_type": "audio_interface"
+	},
+	"dependencies": {
+		"fs-extra": "^0.28.0",
+		"kew": "^0.7.0",
+		"v-conf": "^1.4.0"
+	}
+}
