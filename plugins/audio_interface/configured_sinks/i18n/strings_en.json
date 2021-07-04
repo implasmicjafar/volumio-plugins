@@ -1,7 +1,10 @@
 {
     "CONFIGURED_SINKS_CONFIGURATION" :
     {
-        "TITLE" : "Audio Sinks Configuration"
+        "TITLE" : "Audio Sinks Configuration",
+        "SWITCH_OPTION_TITLE": "Amplifiers and Switches",
+        "SPEAKERS_OPTION_TITLE": "Speakers and Rooms",
+        "ZONES_OPTION_TITLE": "Zones Configuration"
     },
     
     "SAVE":"Save"

@@ -140,6 +140,19 @@ configuredSinks.prototype.startShairportSyncMeta = function() {
     var self = this;
 };
 
+configuredSinks.prototype.deleteSwitch = function(switchId) {
+    var self = this;
+};
+
+configuredSinks.prototype.addSwitch = function() {
+    var self = this;
+};
+
+configuredSinks.prototype.saveSwitch = function(switchId) {
+    var self = this;
+};
+
+
 // Playback Controls ---------------------------------------------------------------------------------------
 // If your plugin is not a music_sevice don't use this part and delete it
 /*

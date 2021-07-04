@@ -1,7 +1,116 @@
 {
-  "page": {
-    "label": "TRANSLATE.CONFIGURED_SINKS_CONFIGURATION.TITLE"
-  },
-  "sections": [
-  ]
+    "page": {
+        "label": "TRANSLATE.CONFIGURED_SINKS_CONFIGURATION.TITLE"
+    },
+    "sections": [
+        {
+            "id": "zone_definitions",
+            "element": "section",
+            "label": "TRANSLATE.CONFIGURED_SINKS_CONFIGURATION.ZONES_OPTION_TITLE",
+            "icon": "fa-map-marker",
+            "value": {
+                "value": "",
+                "label": ""
+            },
+            "content": [
+
+            ]
+        },
+        {
+            "id": "speakers_definitions",
+            "element": "section",
+            "label": "TRANSLATE.CONFIGURED_SINKS_CONFIGURATION.SPEAKERS_OPTION_TITLE",
+            "icon": "fa-volume-up",
+            "value": {
+                "value": "",
+                "label": ""
+            },
+            "content": [
+
+            ]
+        },
+        {
+            "id": "switches_definitions",
+            "element": "section",
+            "label": "TRANSLATE.CONFIGURED_SINKS_CONFIGURATION.SWITCH_OPTION_TITLE",
+            "icon": "fa-plug",
+            "value": {
+                "value": "",
+                "label": ""
+            },
+            "content": [
+                {
+                    "id": "switch0",
+                    "label": "Sonoff 1",
+                    "element": "switchRow",
+                    "name": {
+                        "id": "switch0_name",
+                        "value": "Sonoff 1"
+                    },
+                    "switch": {
+                        "id": "switch0_switch",
+                        "value": "000.000.000.000"
+                    },
+                    "enable": {
+                        "id": "switch0_enable",
+                        "value": false
+                    },
+                    "delete": {
+                        "id": "switch0_delete",
+                        "label": "Delete",
+                        "value": {},
+                        "onClick": {
+                            "askForConfirm": {
+                                "title": "Confirmation",
+                                "message": "Are you sure you wand to delete the switch?"
+                            },
+                            "type": "emit",
+                            "message": "callMethod",
+                            "data": {
+                                "endpoint": "audio_interface/configured_sinks",
+                                "method": "deleteSwitch",
+                                "data": "switch0"
+                            }
+                        }
+                    }
+                },
+                {
+                    "id" : "switchFooter",
+                    "element": "ConfigFooter",
+                    "add": {
+                        "id": "addswitch",
+                        "element": "button",
+                        "label" : "Add",
+                        "onClick": {
+                            "type": "emit",
+                            "message": "callMethod",
+                            "data": {
+                                "endpoint": "audio_interface/configured_sinks",
+                                "method":"addSwitch",
+                                "data":""
+                            }
+                        }
+                    },
+                    "save" : {
+                        "id": "saveswitch",
+                        "element": "button",
+                        "label" : "Save",
+                        "onClick": {
+                            "type": "emit",
+                            "message": "callMethod",
+                            "data": {
+                                "endpoint": "audio_interface/configured_sinks",
+                                "method":"saveSwitch",
+                                "data":[
+                                    "switch0_name",
+                                    "switch0_switch",
+                                    "switch0_enable"
+                                ]
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    ]
 }
