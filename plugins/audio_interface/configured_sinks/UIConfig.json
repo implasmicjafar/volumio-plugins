@@ -96,7 +96,7 @@
                         "element": "button",
                         "label" : "Save",
                         "onClick": {
-                            "type": "emit",
+                            "type": "controller",
                             "message": "callMethod",
                             "data": {
                                 "endpoint": "audio_interface/configured_sinks",
