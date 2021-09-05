@@ -1,7 +1,9 @@
 'use strict';
 
 var libQ = require('kew');
-var fs=require('fs-extra');
+var fs = require('fs-extra');
+var http = require('http');
+const isIP = require('is-ip');
 var config = new (require('v-conf'))();
 var exec = require('child_process').exec;
 var execSync = require('child_process').execSync;
@@ -22,6 +24,7 @@ function configuredSinks(context) {
 	this.commandRouter = this.context.coreCommand;
 	this.logger = this.context.logger;
 	this.configManager = this.context.configManager;
+    this.configuration = {};
 }
 
 configuredSinks.prototype.onVolumioStart = function() {
@@ -89,6 +92,216 @@ configuredSinks.prototype.onRestart = function() {
 
 
 // Configuration Methods -----------------------------------------------------------------------------
+async function getSwitches(section)
+{
+    section.content = [];
+    {
+        var configs = undefined;
+        try
+        {
+            var dat = fs.readFileSync(__dirname + '/config.json',{encoding:'utf8', flag:'r'});
+            if (dat === '')
+            {                            
+            }                   
+            else
+            {
+                configs = JSON.parse(dat);
+            }      
+        }
+        catch (err)
+        {
+        }
+        
+        if ((configs != undefined) && (configs.switches != undefined))
+        {      
+            for (var ijx = 0; ijx < configs.switches.length; ijx++)
+            {
+                var element = configs.switches[ijx];                        
+                var aswitch = element;
+                aswitch.reachable = false;  
+
+                if ((aswitch.ip != undefined) && (aswitch.ip !== ""))
+                {                                                                                          
+                    var options = {
+                        host: aswitch.ip,
+                        path: '/cm?cmnd=Status'
+                    }
+                    
+                    var request_call = new Promise((resolve, reject) => {
+                        var data = '';                                
+                        var request = http.request(options, function (res) {                
+                            res.on('data', function (chunk) {
+                                data += chunk;
+                            });
+            
+                            res.on('end', function () {                                    
+                                resolve(data);                                            
+                            });                                        
+                        }); 
+                        
+                        request.on('error', function (e) {                                                                                    
+                            reject(e);
+                        });
+            
+                        request.end();
+                    });
+                    
+                    try
+                    {
+                        var data = await request_call;
+                        var jsonObj = undefined;
+                        if (data === '')
+                        {                                        
+                        }
+                        else
+                        {
+                            jsonObj = JSON.parse(data);
+                        }
+
+                        if (jsonObj != undefined)
+                        {
+                            aswitch.status = jsonObj.Status.Power;
+                            aswitch.reachable = true;
+                            if (aswitch.status == 0)
+                            {
+                                element.status = 0;
+                            }else
+                            {
+                                element.status = 1;
+                            }
+                        }
+                        else
+                        {
+                            aswitch.status = -5;
+                            element.status = -5;
+                        }
+                    }
+                    catch (error)
+                    {
+                        console.log(error.message);
+                        aswitch.status = -5;
+                        element.status = -5;
+                    }          
+                    
+                    section.content.push(aswitch);                                                                                 
+                }
+                else
+                {
+                    aswitch.status = -3;
+                    element.status = -3;
+                    section.content.push(aswitch);
+                }  
+                
+                
+                aswitch.delete =
+                {
+                    id: 'switch_' + ijx + '_delete',
+                    onClick : {
+                        askForConfirm : {
+                            title: 'Delete Confirmation',
+                            message: 'Are you want to delete ' + aswitch.name + '?'
+                        },
+                        type: 'emit',
+                        message: 'callMethod',
+                        data:{
+                            endpoint:'audio_interface/configured_sinks',
+                            method: 'deleteSwitch',
+                            data: aswitch.id
+                        }
+                    }
+                };
+                
+                aswitch.view =
+                {
+                    id: 'switch_' + ijx + '_view',
+                    onClick: {
+                        type: 'emit',
+                        message: 'callMethod',
+                        data: {
+                            endpoint: 'audio_interface/configured_sinks',
+                            method: 'viewSwitch',
+                            data: aswitch.id                                    
+                        }
+                    }
+                };
+
+                aswitch.edit =
+                {
+                    id: 'switch_' + ijx + '_save',
+                    onClick: {
+                        type: 'emit',
+                        message: 'callMethod',
+                        data: {
+                            endpoint: 'audio_interface/configured_sinks',
+                            method: 'editSwitch',
+                            data: {
+                                id : element.id,
+                                name: element.name,
+                                ip: element.ip,
+                                mac:    element.mac,
+                                enabled: element.enabled,
+                                on: element.on,
+                                status: element.status
+                            }                                    
+                        }
+                    }
+                }
+
+                aswitch.save =
+                {
+                    id: 'switch_' + ijx + '_save',
+                    onClick: {
+                        type: 'emit',
+                        message: 'callMethod',
+                        data: {
+                            endpoint: 'audio_interface/configured_sinks',
+                            method: 'saveSwitch',
+                            data: {
+                                id : element.id,
+                                name: element.name,
+                                ip: element.ip,
+                                mac:    element.mac,
+                                enabled: element.enabled,
+                                on: element.on,
+                                status: element.status
+                            }                                    
+                        }
+                    }
+                }
+            }                   
+
+            /*
+            try
+            {
+                fs.writeFileSync(__dirname + '/config.json', JSON.stringify(configs));
+            } 
+            catch(err)
+            {
+                console.log(err);
+            }
+            */
+        }                
+    }      
+        
+    section.add = {
+        id:"switch_add",
+        onClick:{
+            type:'emit',
+            message:'callMethod',
+            data:{
+                endpoint:'audio_interface/configured_sinks',
+                method:'addSwitch',
+                data:{}
+            }
+        }
+    }    
+}
+
+configuredSinks.prototype.updateUIConfig = function(uiconf)
+{
+    var self = this;
+    self.configuration = uiconf;
+};
 
 configuredSinks.prototype.getUIConfig = function() {
     var defer = libQ.defer();
@@ -98,10 +311,45 @@ configuredSinks.prototype.getUIConfig = function() {
     self.commandRouter.i18nJson(__dirname + '/i18n/strings_' + lang_code + '.json',
     __dirname + '/i18n/strings_en.json',
     __dirname + '/UIConfig.json')
-    .then(function (uiconf) {
+    .then(async function (uiconf) {
+        
+        // uiconf should now contain the loaded config.
+        // Process switches.  
+        for (var idx = 0; idx < uiconf.sections.length; idx++) 
+        {
+            var section = uiconf.sections[idx];        
+            if (section.id === "switches_definitions")
+            {
+                await getSwitches(section);
+            }
+            else if (section.id === "speakers_definitions")
+            {
+
+            }
+            else if (section.id === "zone_definitions")
+            {
+
+            }
+        } 
+        
+        uiconf.cancel = {
+            id:"configured_sinks_cancel_add_edit",
+            onClick:{
+                type:'emit',
+                message:'callMethod',
+                data:{
+                    endpoint:'audio_interface/configured_sinks',
+                    method:'cancelAddEdit',
+                    data:{}
+                }
+            }
+        } 
+        
+        self.commandRouter.executeOnPlugin('audio_interface', 'configured_sinks', 'updateUIConfig', uiconf);        
         defer.resolve(uiconf);
-    })
-    .fail(function (e) {
+    })    
+    .fail(function (e) 
+    {
       self.logger.error('Error retrieving UIConf: ' + e);
       defer.reject(new Error());
     });
@@ -144,8 +392,114 @@ configuredSinks.prototype.deleteSwitch = function(switchId) {
     var self = this;
 };
 
-configuredSinks.prototype.addSwitch = function() {
+configuredSinks.prototype.viewSwitch = function(switchId) {
     var self = this;
+};
+
+configuredSinks.prototype.editSwitch = function(switchId) {
+    var self = this;
+};
+
+configuredSinks.prototype.cancelAddEdit = function() {
+    var self = this;
+    try
+    {
+        var resolve = self.getUIConfig();
+        if (resolve)
+        {
+            resolve.then(function(uiconf)
+            {
+                self.commandRouter.broadcastMessage('pushUiConfig', uiconf);
+            });
+        }
+    }
+    catch (error)
+    {
+        console.log(error.message);
+    }
+};
+
+configuredSinks.prototype.addSwitch = async function(switchItem) {
+    var self = this; 
+    var uiconf = self.configuration;       
+    uiconf.sections.forEach(section => {
+        if (section.id === "switches_definitions")
+        {
+            section.inAddMode = true; 
+            section.saveNew = {
+                id:"switch_saveNew",
+                onClick:{
+                    type:'emit',
+                    message:'callMethod',
+                    data:{
+                        endpoint:'audio_interface/configured_sinks',
+                        method:'saveNewSwitch',
+                        data:{
+                            id : -1,
+                            name: "",
+                            ip:"",
+                            mac:"",
+                            enabled:false,
+                            on:false,
+                            status:-1
+                        }
+                    }
+                }
+            }       
+        }
+    });
+    
+    self.commandRouter.broadcastMessage('pushUiConfig', uiconf);    
+};
+
+configuredSinks.prototype.saveNewSwitch = function(switchItem) {
+    var self = this;
+    var errMsg = '';
+    var uiconf = self.configuration;
+    if ((switchItem.name != undefined) && (switchItem.name.trim().length >= 5) && (switchItem.name.trim().length <= 30))
+    {           
+        var matched = false;
+        uiconf.sections.forEach(section => {
+            if (section.id === "switches_definitions")
+            {
+                section.content.forEach(element => {
+                    if (element.name === switchItem.name.trim())
+                    {
+                        matched = true;
+                    }
+                });                
+            }
+        });
+
+        if (matched)
+        {
+            errMsg += 'The switch name is not unique.<br/>';
+        }
+    }
+    else
+    {
+        errMsg += 'The switch name must be between 5 and 30 characters long.<br/>';       
+    }
+
+    if (!isIP.v4(switchItem.ip))
+    {
+        errMsg = 'The switch ip must be a valid ip v4 address.<br/>';                
+    }
+
+    var regex = /^([0-9A-F]{2}[:-]?){5}([0-9A-F]{2})$/;
+    if (!regex.test(switchItem.mac))
+    {
+        errMsg = 'The switch mac address must be a valid mac address.<br/>';
+    }
+
+    if (errMsg !== '')
+    {
+        self.commandRouter.broadcastToastMessage('error', 'Input Error', errMsg);
+        return;
+    }
+
+    // All checks done, the input is valid..
+
 };
 
 configuredSinks.prototype.saveSwitch = function(switchId) {
@@ -156,163 +510,103 @@ configuredSinks.prototype.saveSwitch = function(switchId) {
 // Playback Controls ---------------------------------------------------------------------------------------
 // If your plugin is not a music_sevice don't use this part and delete it
 /*
-
 configuredSinks.prototype.addToBrowseSources = function () {
-
 	// Use this function to add your music service plugin to music sources
     //var data = {name: 'Spotify', uri: 'spotify',plugin_type:'music_service',plugin_name:'spop'};
     this.commandRouter.volumioAddToBrowseSources(data);
 };
-
 configuredSinks.prototype.handleBrowseUri = function (curUri) {
     var self = this;
-
     //self.commandRouter.logger.info(curUri);
     var response;
-
-
     return response;
 };
-
-
-
 // Define a method to clear, add, and play an array of tracks
 configuredSinks.prototype.clearAddPlayTrack = function(track) {
 	var self = this;
 	self.commandRouter.pushConsoleMessage('[' + Date.now() + '] ' + 'configuredSinks::clearAddPlayTrack');
-
 	self.commandRouter.logger.info(JSON.stringify(track));
-
 	return self.sendSpopCommand('uplay', [track.uri]);
 };
-
 configuredSinks.prototype.seek = function (timepos) {
     this.commandRouter.pushConsoleMessage('[' + Date.now() + '] ' + 'configuredSinks::seek to ' + timepos);
-
     return this.sendSpopCommand('seek '+timepos, []);
 };
-
 // Stop
 configuredSinks.prototype.stop = function() {
 	var self = this;
 	self.commandRouter.pushConsoleMessage('[' + Date.now() + '] ' + 'configuredSinks::stop');
-
-
 };
-
 // Spop pause
 configuredSinks.prototype.pause = function() {
 	var self = this;
 	self.commandRouter.pushConsoleMessage('[' + Date.now() + '] ' + 'configuredSinks::pause');
-
-
 };
-
 // Get state
 configuredSinks.prototype.getState = function() {
 	var self = this;
 	self.commandRouter.pushConsoleMessage('[' + Date.now() + '] ' + 'configuredSinks::getState');
-
-
 };
-
 //Parse state
 configuredSinks.prototype.parseState = function(sState) {
 	var self = this;
 	self.commandRouter.pushConsoleMessage('[' + Date.now() + '] ' + 'configuredSinks::parseState');
-
 	//Use this method to parse the state and eventually send it with the following function
 };
-
 // Announce updated State
 configuredSinks.prototype.pushState = function(state) {
 	var self = this;
 	self.commandRouter.pushConsoleMessage('[' + Date.now() + '] ' + 'configuredSinks::pushState');
-
 	return self.commandRouter.servicePushState(state, self.servicename);
 };
-
-
 configuredSinks.prototype.explodeUri = function(uri) {
 	var self = this;
 	var defer=libQ.defer();
-
 	// Mandatory: retrieve all info for a given URI
-
 	return defer.promise;
 };
-
 configuredSinks.prototype.getAlbumArt = function (data, path) {
-
 	var artist, album;
-
 	if (data != undefined && data.path != undefined) {
 		path = data.path;
 	}
-
 	var web;
-
 	if (data != undefined && data.artist != undefined) {
 		artist = data.artist;
 		if (data.album != undefined)
 			album = data.album;
 		else album = data.artist;
-
 		web = '?web=' + nodetools.urlEncode(artist) + '/' + nodetools.urlEncode(album) + '/large'
 	}
-
 	var url = '/albumart';
-
 	if (web != undefined)
 		url = url + web;
-
 	if (web != undefined && path != undefined)
 		url = url + '&';
 	else if (path != undefined)
 		url = url + '?';
-
 	if (path != undefined)
 		url = url + 'path=' + nodetools.urlEncode(path);
-
 	return url;
 };
-
-
-
-
-
 configuredSinks.prototype.search = function (query) {
 	var self=this;
 	var defer=libQ.defer();
-
 	// Mandatory, search. You can divide the search in sections using following functions
-
 	return defer.promise;
 };
-
 configuredSinks.prototype._searchArtists = function (results) {
-
 };
-
 configuredSinks.prototype._searchAlbums = function (results) {
-
 };
-
 configuredSinks.prototype._searchPlaylists = function (results) {
-
-
 };
-
 configuredSinks.prototype._searchTracks = function (results) {
-
 };
-
 configuredSinks.prototype.goto=function(data){
     var self=this
     var defer=libQ.defer()
-
 // Handle go to artist and go to album function
-
      return defer.promise;
 };
 */

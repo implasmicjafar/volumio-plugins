@@ -1,39 +1,17 @@
 {
     "page": {
-        "label": "TRANSLATE.CONFIGURED_SINKS_CONFIGURATION.TITLE"
+        "label": "TRANSLATE.CONFIGURED_SINKS_CONFIGURATION.TITLE",
+        "contentTemplate" : "configured-sinks.html"
     },
     "sections": [
-        {
-            "id": "zone_definitions",
-            "element": "section",
-            "label": "TRANSLATE.CONFIGURED_SINKS_CONFIGURATION.ZONES_OPTION_TITLE",
-            "icon": "fa-map-marker",
-            "value": {
-                "value": "",
-                "label": ""
-            },
-            "content": [
-
-            ]
-        },
-        {
-            "id": "speakers_definitions",
-            "element": "section",
-            "label": "TRANSLATE.CONFIGURED_SINKS_CONFIGURATION.SPEAKERS_OPTION_TITLE",
-            "icon": "fa-volume-up",
-            "value": {
-                "value": "",
-                "label": ""
-            },
-            "content": [
-
-            ]
-        },
         {
             "id": "switches_definitions",
             "element": "section",
             "label": "TRANSLATE.CONFIGURED_SINKS_CONFIGURATION.SWITCH_OPTION_TITLE",
             "icon": "fa-plug",
+            "addLabel": "Add New Switch",
+            "inAddMode": false,
+            "inEditSwitch": -1,
             "value": {
                 "value": "",
                 "label": ""
@@ -111,6 +89,38 @@
                     }
                 }
             ]
-        }
+        },
+        {
+            "id": "speakers_definitions",
+            "element": "section",
+            "label": "TRANSLATE.CONFIGURED_SINKS_CONFIGURATION.SPEAKERS_OPTION_TITLE",
+            "icon": "fa-volume-up",
+            "addLabel":"Add New Speaker",
+            "inAddMode": false,
+            "inEditSpeaker": -1,
+            "value": {
+                "value": "",
+                "label": ""
+            },
+            "content": [
+
+            ]
+        },
+        {
+            "id": "zone_definitions",
+            "element": "section",
+            "label": "TRANSLATE.CONFIGURED_SINKS_CONFIGURATION.ZONES_OPTION_TITLE",
+            "icon": "fa-map-marker",
+            "addLabel": "Add New Zone",
+            "inAddMode": false,
+            "inEditZone": -1,
+            "value": {
+                "value": "",
+                "label": ""
+            },
+            "content": [
+
+            ]
+        }                
     ]
 }

@@ -1,3 +1,257 @@
 {
- 
+    "indices":{
+        "zones" : 12,
+        "speakers" : 7,
+        "switches": 3
+    },
+    "ports":[3000, 3001, 3002, 3003, 3004, 3005, 3006, 3007, 3008, 3009, 3010, 3011, 3012, 3013, 3014, 3015, 3016, 3017, 3018, 3019, 3020],
+    "bases":[3100, 3110, 3200, 3210, 3300, 3310, 3400, 3410, 3500, 3510, 4000, 4011, 5000, 5010, 6000, 6011, 7000, 7010, 8000, 8010, 9000, 9010],
+    "zones":[
+        {
+            "id" : 0,
+            "name" : "Living Room",
+            "speakers":[0],
+            "port":3000,
+            "base":3100,
+            "inerror":false,
+            "details":"",
+            "configfile":"",
+            "deamonfile":"",
+            "pidfile":"",
+            "pid":0,
+            "enabled": false,
+            "playing": false
+        },
+        {
+            "id" : 1,
+            "name" : "Dining Area",
+            "speakers":[1],
+            "port":3001,
+            "base":3110,
+            "details":"",
+            "configfile":"",
+            "deamonfile":"",
+            "pidfile":"",
+            "pid":0,
+            "enabled" : false,
+            "playing" : false
+        },
+        {
+            "id" : 2,
+            "name" : "Kitchen Area",
+            "speakers":[ 2],
+            "port":3002,
+            "base":3200,
+            "details":"",
+            "configfile":"",
+            "deamonfile":"",
+            "pidfile":"",
+            "pid":0,
+            "enabled": false,
+            "playing": false
+        },
+        {
+            "id": 3,
+            "name": "Foyer",
+            "speakers" : [3],
+            "port":3003,
+            "base":3210,
+            "details":"",
+            "configfile":"",
+            "deamonfile":"",
+            "pidfile":"",
+            "pid":0,
+            "enabled": false,
+            "playing": false
+        },
+        {
+            "id": 4,
+            "name": "Stairs",
+            "speakers" : [4],
+            "port":3004,
+            "base":3300,
+            "details":"",
+            "configfile":"",
+            "deamonfile":"",
+            "pidfile":"",
+            "pid":0,
+            "enabled": false,
+            "playing" : false
+        },
+        {
+            "id": 5,
+            "name": "Loft",
+            "speakers" : [5],
+            "port":3005,
+            "base":3310,
+            "details":"",
+            "configfile":"",
+            "deamonfile":"",
+            "pidfile":"",
+            "pid":0,
+            "enabled": false,
+            "playing": false
+        },
+        {
+            "id" : 6,
+            "name" : "Master Bedroom",
+            "speakers": [6],
+            "port":3006,
+            "base":3400,
+            "details":"",
+            "configfile":"",
+            "deamonfile":"",
+            "pidfile":"",
+            "pid":0,            
+            "enabled":false,
+            "playing":false
+        },
+        {
+            "id": 7,
+            "name": "Living Areas",
+            "speakers": [0,1,2,4, 5, 6],
+            "port":3007,
+            "base":3410,
+            "details":"",
+            "configfile":"",
+            "deamonfile":"",
+            "pidfile":"",
+            "pid":0,
+            "enabled": false,
+            "playing":false
+        },
+        {
+            "id":8,
+            "name":"Downstair Areas",
+            "speakers":[0,1,2],
+            "port":3008,
+            "base":3500,
+            "details":"",
+            "configfile":"",
+            "deamonfile":"",
+            "pidfile":"",
+            "pid":0,
+            "enabled":false,
+            "playing":false
+        },
+        {
+            "id":9,
+            "name":"Downstairs",
+            "speakers":[0,1,2,3],
+            "port":3009,
+            "base":3510,
+            "details":"",
+            "configfile":"",
+            "deamonfile":"",
+            "pidfile":"",
+            "pid":0,
+            "enabled":false,
+            "playing":false
+        },
+        {
+            "id":10,
+            "name":"Upstairs",
+            "speakers":[4,5,6],
+            "port":3010,
+            "base":3600,
+            "details":"",
+            "configfile":"",
+            "deamonfile":"",
+            "pidfile":"",
+            "pid":0,
+            "enabled":false,
+            "playing":false
+        },
+        {
+            "id":11,
+            "name":"All Areas",
+            "speakers":[0,1,2,3,4,5,6],
+            "port":3011,
+            "base":3610,
+            "details":"",
+            "configfile":"",
+            "deamonfile":"",
+            "pidfile":"",
+            "pid":0,
+            "enabled":false,
+            "playing":false
+        }
+
+    ],
+    "speakers":[
+        {
+            "id": 0,
+            "name": "Living Room",
+            "switch" : 0,
+            "playing": false
+        },
+        {
+            "id": 1,
+            "name": "Dining Room",
+            "switch" : 0,
+            "playing": false
+        },
+        {
+            "id": 2,
+            "name": "Kitchen & Breakfast Room",
+            "switch" : 0,
+            "playing": false
+        },
+        {
+            "id": 3,
+            "name": "Foyer",
+            "switch" : 0,
+            "playing": false
+        },
+        {
+            "id": 4,
+            "name": "Stairs",
+            "switch" : 0,
+            "playing": false
+        },
+        {
+            "id": 5,
+            "name": "Loft",
+            "switch" : 0,
+            "playing": false
+        },
+        {
+            "id": 6,
+            "name": "Master Bedroom",
+            "switch" : 0,
+            "device":"",
+            "mixer": "",
+            "control": "",                        
+            "playing": false
+        }
+    ],
+    "switches":[
+        {
+            "id" : 0,
+            "name": "Sonoff 3 - tasmota-3183",
+            "ip":"172.16.28.132",
+            "mac":"84:0d:8e:70:4c:6f",
+            "enabled":false,
+            "on":false,
+            "status":-1
+        },
+        {
+            "id" : 1,
+            "name": "Sonoff 1 - tasmota-3225",
+            "ip":"172.16.28.133",
+            "mac":"84:0d:8e:65:2c:99",
+            "enabled":false,
+            "on":false,
+            "status":-1
+        },
+        {
+            "id" : 2,
+            "name": "Sonoff 2 - tasmota-6304",
+            "ip":"172.16.28.131",
+            "mac":"60:01:94:c6:f8:a0",
+            "enabled":false,
+            "on":false,
+            "status":-1
+        }
+    ]
 }
