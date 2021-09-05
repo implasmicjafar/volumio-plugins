@@ -384,6 +384,32 @@
 					"updated": "5-10-2020"
 				}
 			]
+		},
+		{
+			"prettyName": "audio interface",
+			"name": "audio_interface",
+			"id": "cat4",
+			"description": "",
+			"plugins": [
+				{
+					"prettyName": "Configured Audio Sinks",
+					"icon": "fa-lightbulb-o",
+					"name": "configured_sinks",
+					"version": "1.0.0",
+					"url": "http://volumio.github.io/volumio-plugins/plugins/volumio/i386/audio_interface/configured_sinks/configured_sinks.zip",
+					"license": "ISC",
+					"description": "Allows configuration and use of one or more named audio sinks from alsa hardware.",
+					"details": "",
+					"author": "Jafar Jaeger",
+					"screenshots": [
+						{
+							"image": "",
+							"thumb": ""
+						}
+					],
+					"updated": "5-9-2021"
+				}
+			]
 		}
 	]
 }
