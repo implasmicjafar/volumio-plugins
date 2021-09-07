@@ -1,9 +1,11 @@
 {
-    "indices":{
+    "indices":
+    {
         "zones" : 12,
         "speakers" : 7,
         "switches": 3
     },
+    "devices":[],
     "ports":[3000, 3001, 3002, 3003, 3004, 3005, 3006, 3007, 3008, 3009, 3010, 3011, 3012, 3013, 3014, 3015, 3016, 3017, 3018, 3019, 3020],
     "bases":[3100, 3110, 3200, 3210, 3300, 3310, 3400, 3410, 3500, 3510, 4000, 4011, 5000, 5010, 6000, 6011, 7000, 7010, 8000, 8010, 9000, 9010],
     "zones":[
@@ -182,44 +184,62 @@
         {
             "id": 0,
             "name": "Living Room",
-            "switch" : 0,
+            "sw" : 0,
+            "device":{"id":0,"path":"","label":""},
+            "mixer": "",
+            "control": "",  
             "playing": false
         },
         {
             "id": 1,
             "name": "Dining Room",
-            "switch" : 0,
+            "sw" : 0,
+            "device":{"id":1,"path":"","label":""},
+            "mixer": "",
+            "control": "",  
             "playing": false
         },
         {
             "id": 2,
             "name": "Kitchen & Breakfast Room",
-            "switch" : 0,
+            "sw" : 0,
+            "device":{"id":2,"path":"","label":""},
+            "mixer": "",
+            "control": "",  
             "playing": false
         },
         {
             "id": 3,
             "name": "Foyer",
-            "switch" : 0,
+            "sw" : 0,
+            "device":{"id":3,"path":"","label":""},
+            "mixer": "",
+            "control": "",  
             "playing": false
         },
         {
             "id": 4,
             "name": "Stairs",
-            "switch" : 0,
+            "sw" : 0,
+            "device":{"id":4,"path":"","label":""},
+            "mixer": "",
+            "control": "",  
             "playing": false
         },
         {
             "id": 5,
             "name": "Loft",
-            "switch" : 0,
+            "sw" : 0,
+            "device":{"id":5,"path":"","label":""},
+            "mixer": "",
+            "control": "",  
             "playing": false
         },
         {
             "id": 6,
             "name": "Master Bedroom",
-            "switch" : 0,
-            "device":"",
+            "sw" : 0,
+            "device":{"id":6,"path":"","label":""},
             "mixer": "",
             "control": "",                        
             "playing": false

@@ -25,6 +25,7 @@ function configuredSinks(context) {
 	this.logger = this.context.logger;
 	this.configManager = this.context.configManager;
     this.configuration = {};
+    this.token = 0;
 }
 
 configuredSinks.prototype.onVolumioStart = function() {
@@ -52,6 +53,11 @@ configuredSinks.prototype.onVolumioStart = function() {
     return libQ.resolve();
 }
 
+configuredSinks.prototype.getUIRedirect = function() {
+    var self = this;
+    return self.commandRouter.executeOnPlugin('audio_interface', 'configured_sinks', 'getUIConfig');
+};
+
 /**
  * This function is an override for the alsa_controller plugin.
  * It overrides the UI for audio output settings.
@@ -65,7 +71,7 @@ configuredSinks.prototype.onStart = function() {
     if (alsa_controller != undefined)
     {
         delete alsa_controller['getUIConfig'];
-        alsa_controller.getUIConfig = self.getUIConfig;
+        alsa_controller.getUIConfig = self.getUIRedirect;
         module.exports = alsa_controller;
     }
 
@@ -92,41 +98,163 @@ configuredSinks.prototype.onRestart = function() {
 
 
 // Configuration Methods -----------------------------------------------------------------------------
-async function getSwitches(section)
+configuredSinks.prototype.getZones = async function(configs, section, scan)
 {
+    var self = this;
+};
+
+configuredSinks.prototype.getSpeakers = async function(configs, section, scan)
+{
+    var self = this;
     section.content = [];
+    if ((configs != undefined) && (configs.speakers != undefined))
     {
-        var configs = undefined;
-        try
+        for (var ijx = 0; ijx < configs.speakers.length; ijx++)
         {
-            var dat = fs.readFileSync(__dirname + '/config.json',{encoding:'utf8', flag:'r'});
-            if (dat === '')
-            {                            
-            }                   
-            else
+            var element = configs.speakers[ijx];
+            var speaker = JSON.parse(JSON.stringify(element));
+            speaker.delete =
             {
-                configs = JSON.parse(dat);
-            }      
+                id: 'speaker_' + ijx + '_delete',
+                onClick : {
+                    askForConfirm : {
+                        title: 'Delete Confirmation',
+                        message: 'Are you want to delete ' + speaker.name + '?'
+                    },
+                    type: 'emit',
+                    message: 'callMethod',
+                    data:{
+                        endpoint:'audio_interface/configured_sinks',
+                        method: 'deleteSpeaker',
+                        data: 
+                        {
+                            token : self.token,
+                            id: speaker.id
+                        }
+                    }
+                }
+            };
+
+            speaker.edit =
+            {
+                id: 'speaker_' + ijx + '_edit',
+                onClick: {
+                    type: 'emit',
+                    message: 'callMethod',
+                    data: {
+                        endpoint: 'audio_interface/configured_sinks',
+                        method: 'editSpeaker',
+                        data: 
+                        {
+                            token : self.token,
+                            id: speaker.id
+                        }                                 
+                    }
+                }
+            };
+
+            speaker.view =
+            {
+                id: 'speaker_' + ijx + '_edit',
+                onClick: {
+                    type: 'emit',
+                    message: 'callMethod',
+                    data: {
+                        endpoint: 'audio_interface/configured_sinks',
+                        method: 'viewSpeaker',
+                        data: 
+                        {
+                            token : self.token,
+                            id: speaker.id
+                        }                                 
+                    }
+                }
+            };
+
+            var swName = '';
+            configs.switches.forEach(aswitch => {
+                if (aswitch.id == speaker.sw)
+                {
+                    swName = aswitch.name;
+                }
+            });
+
+            speaker.save =
+            {
+                id: 'speaker_' + ijx + '_save',
+                onClick: {
+                    type: 'emit',
+                    message: 'callMethod',
+                    data: {
+                        endpoint: 'audio_interface/configured_sinks',
+                        method: 'saveSpeaker',
+                        data: {
+                            token: self.token,
+                            id : speaker.id,
+                            name: speaker.name,
+                            sw: {id:speaker.sw, name:swName},
+                            device: speaker.device,
+                            mixer: speaker.mixer,
+                            control: speaker.control,
+                            playing: speaker.playing
+                        }                                    
+                    }
+                }
+            };
+
+            section.content.push(speaker);
         }
-        catch (err)
+
+        var devices = [];
+        if (scan || (configs.devices.length == 0))
         {
+
         }
         
-        if ((configs != undefined) && (configs.switches != undefined))
-        {      
-            for (var ijx = 0; ijx < configs.switches.length; ijx++)
-            {
-                var element = configs.switches[ijx];                        
-                var aswitch = element;
-                aswitch.reachable = false;  
+        section.devices = devices;
+        section.switches = [];
+        configs.switches.forEach(aswitch => {
+            section.switches.push({id:aswitch.id, name:aswitch.name});
+        });
 
-                if ((aswitch.ip != undefined) && (aswitch.ip !== ""))
-                {                                                                                          
+        section.add = 
+        {
+            id:"speaker_add",
+            onClick:{
+                type:'emit',
+                message:'callMethod',
+                data:{
+                    endpoint:'audio_interface/configured_sinks',
+                    method:'addSpeaker',
+                    data:{
+                        token: self.token
+                    }
+                }
+            }
+        };
+    }
+};
+
+configuredSinks.prototype.getSwitches = async function(configs, section, scan)
+{
+    var self = this;
+    section.content = [];                   
+    if ((configs != undefined) && (configs.switches != undefined))
+    {      
+        for (var ijx = 0; ijx < configs.switches.length; ijx++)
+        {
+            var element = configs.switches[ijx];                        
+            var aswitch = JSON.parse(JSON.stringify(element));              
+            if ((aswitch.ip != undefined) && (aswitch.ip !== ""))
+            {     
+                if (scan)
+                {         
+                    aswitch.reachable = false;                                                                            
                     var options = {
                         host: aswitch.ip,
                         path: '/cm?cmnd=Status'
                     }
-                    
+                                        
                     var request_call = new Promise((resolve, reject) => {
                         var data = '';                                
                         var request = http.request(options, function (res) {                
@@ -162,6 +290,7 @@ async function getSwitches(section)
                         {
                             aswitch.status = jsonObj.Status.Power;
                             aswitch.reachable = true;
+                            element.reachable = true;
                             if (aswitch.status == 0)
                             {
                                 element.status = 0;
@@ -181,129 +310,104 @@ async function getSwitches(section)
                         console.log(error.message);
                         aswitch.status = -5;
                         element.status = -5;
-                    }          
-                    
-                    section.content.push(aswitch);                                                                                 
-                }
-                else
-                {
-                    aswitch.status = -3;
-                    element.status = -3;
-                    section.content.push(aswitch);
-                }  
+                    }  
+                }        
                 
-                
-                aswitch.delete =
-                {
-                    id: 'switch_' + ijx + '_delete',
-                    onClick : {
-                        askForConfirm : {
-                            title: 'Delete Confirmation',
-                            message: 'Are you want to delete ' + aswitch.name + '?'
-                        },
-                        type: 'emit',
-                        message: 'callMethod',
-                        data:{
-                            endpoint:'audio_interface/configured_sinks',
-                            method: 'deleteSwitch',
-                            data: aswitch.id
-                        }
-                    }
-                };
-                
-                aswitch.view =
-                {
-                    id: 'switch_' + ijx + '_view',
-                    onClick: {
-                        type: 'emit',
-                        message: 'callMethod',
-                        data: {
-                            endpoint: 'audio_interface/configured_sinks',
-                            method: 'viewSwitch',
-                            data: aswitch.id                                    
-                        }
-                    }
-                };
-
-                aswitch.edit =
-                {
-                    id: 'switch_' + ijx + '_save',
-                    onClick: {
-                        type: 'emit',
-                        message: 'callMethod',
-                        data: {
-                            endpoint: 'audio_interface/configured_sinks',
-                            method: 'editSwitch',
-                            data: {
-                                id : element.id,
-                                name: element.name,
-                                ip: element.ip,
-                                mac:    element.mac,
-                                enabled: element.enabled,
-                                on: element.on,
-                                status: element.status
-                            }                                    
-                        }
-                    }
-                }
-
-                aswitch.save =
-                {
-                    id: 'switch_' + ijx + '_save',
-                    onClick: {
-                        type: 'emit',
-                        message: 'callMethod',
-                        data: {
-                            endpoint: 'audio_interface/configured_sinks',
-                            method: 'saveSwitch',
-                            data: {
-                                id : element.id,
-                                name: element.name,
-                                ip: element.ip,
-                                mac:    element.mac,
-                                enabled: element.enabled,
-                                on: element.on,
-                                status: element.status
-                            }                                    
-                        }
-                    }
-                }
-            }                   
-
-            /*
-            try
-            {
-                fs.writeFileSync(__dirname + '/config.json', JSON.stringify(configs));
-            } 
-            catch(err)
-            {
-                console.log(err);
+                section.content.push(aswitch); 
             }
-            */
-        }                
-    }      
-        
-    section.add = {
-        id:"switch_add",
-        onClick:{
-            type:'emit',
-            message:'callMethod',
-            data:{
-                endpoint:'audio_interface/configured_sinks',
-                method:'addSwitch',
-                data:{}
+            else
+            {
+                aswitch.reachable = false;
+                element.reachable = false;
+                aswitch.status = -3;
+                element.status = -3;
+                section.content.push(aswitch);
+            }  
+            
+            
+            aswitch.delete =
+            {
+                id: 'switch_' + ijx + '_delete',
+                onClick : {
+                    askForConfirm : {
+                        title: 'Delete Confirmation',
+                        message: 'Are you want to delete ' + aswitch.name + '?'
+                    },
+                    type: 'emit',
+                    message: 'callMethod',
+                    data:{
+                        endpoint:'audio_interface/configured_sinks',
+                        method: 'deleteSwitch',
+                        data: 
+                        {
+                            id: aswitch.id,
+                            token : self.token
+                        } 
+                    }
+                }
+            };                                
+
+            aswitch.edit =
+            {
+                id: 'switch_' + ijx + '_edit',
+                onClick: {
+                    type: 'emit',
+                    message: 'callMethod',
+                    data: 
+                    {
+                        endpoint: 'audio_interface/configured_sinks',
+                        method: 'editSwitch',
+                        data: 
+                        {
+                            id: aswitch.id,
+                            token : self.token
+                        }                                
+                    }
+                }
+            }
+
+            aswitch.save =
+            {
+                id: 'switch_' + ijx + '_save',
+                onClick: {
+                    type: 'emit',
+                    message: 'callMethod',
+                    data: {
+                        endpoint: 'audio_interface/configured_sinks',
+                        method: 'saveSwitch',
+                        data: {
+                            token: self.token,
+                            id : element.id,
+                            name: element.name,
+                            ip: element.ip,
+                            mac:    element.mac,
+                            enabled: element.enabled,
+                            on: element.on,
+                            status: element.status
+                        }                                    
+                    }
+                }
             }
         }
-    }    
+        
+        section.add = {
+            id:"switch_add",
+            onClick:{
+                type:'emit',
+                message:'callMethod',
+                data:{
+                    endpoint:'audio_interface/configured_sinks',
+                    method:'addSwitch',
+                    data:{
+                        token: self.token
+                    }
+                }
+            }
+        };
+    }                                 
 }
 
-configuredSinks.prototype.updateUIConfig = function(uiconf)
-{
-    var self = this;
-    self.configuration = uiconf;
-};
-
-configuredSinks.prototype.getUIConfig = function() {
+configuredSinks.prototype.getUIConfig = function(fullScan) {
     var defer = libQ.defer();
     var self = this;
 
@@ -313,40 +417,99 @@ configuredSinks.prototype.getUIConfig = function() {
     __dirname + '/UIConfig.json')
     .then(async function (uiconf) {
         
-        // uiconf should now contain the loaded config.
-        // Process switches.  
-        for (var idx = 0; idx < uiconf.sections.length; idx++) 
+        var configs = undefined;
+        try
         {
-            var section = uiconf.sections[idx];        
-            if (section.id === "switches_definitions")
+            var dat = fs.readFileSync(__dirname + '/config.json',{encoding:'utf8', flag:'r'});
+            if (dat === '')
+            {                            
+            }                   
+            else
             {
-                await getSwitches(section);
-            }
-            else if (section.id === "speakers_definitions")
-            {
+                configs = JSON.parse(dat);
+            }      
+        }
+        catch (err)
+        {
+        }
 
-            }
-            else if (section.id === "zone_definitions")
+        if (configs == undefined)
+        {
+            defer.reject(new Error());
+        }
+        else
+        {       
+            var scan = true; 
+            if ((fullScan != undefined) && (!fullScan))
             {
-
+                scan = false;
             }
-        } 
-        
-        uiconf.cancel = {
-            id:"configured_sinks_cancel_add_edit",
-            onClick:{
-                type:'emit',
-                message:'callMethod',
-                data:{
-                    endpoint:'audio_interface/configured_sinks',
-                    method:'cancelAddEdit',
-                    data:{}
+
+            // uiconf should now contain the loaded config.
+            // Process switches.  
+            for (var idx = 0; idx < uiconf.sections.length; idx++) 
+            {
+                var section = uiconf.sections[idx];        
+                if (section.id === "switches_definitions")
+                {
+                    await self.getSwitches(configs, section, scan);
                 }
+                else if (section.id === "speakers_definitions")
+                {
+                    await self.getSpeakers(configs, section, scan);
+                }
+                else if (section.id === "zone_definitions")
+                {
+                    await self.getZones(configs, section, scan);
+                }
+            } 
+            
+            uiconf.cancel = {
+                id:"configured_sinks_cancel_add_edit",
+                onClick:{
+                    type:'emit',
+                    message:'callMethod',
+                    data:{
+                        endpoint:'audio_interface/configured_sinks',
+                        method:'cancelAddEdit',
+                        data:{
+                            token:self.token
+                        }
+                    }
+                }
+            };
+
+            uiconf.refresh = {
+                id:"configured_sinks_refresh",
+                onClick:{
+                    type:'emit',
+                    message:'callMethod',
+                    data:{
+                        endpoint:'audio_interface/configured_sinks',
+                        method:'refresh',
+                        data:{
+                            token:self.token
+                        }
+                    }
+                }
+            };
+
+            if (scan)
+            {
+                try
+                {
+                    fs.writeFileSync(__dirname + '/config.json', JSON.stringify(configs));
+                } 
+                catch(err)
+                {
+                    console.log(err.message);                    
+                } 
             }
-        } 
-        
-        self.commandRouter.executeOnPlugin('audio_interface', 'configured_sinks', 'updateUIConfig', uiconf);        
-        defer.resolve(uiconf);
+            
+            var str = JSON.stringify(uiconf);
+            self.configuration = JSON.parse(str);      
+            defer.resolve(uiconf);
+        }
     })    
     .fail(function (e) 
     {
@@ -388,122 +551,601 @@ configuredSinks.prototype.startShairportSyncMeta = function() {
     var self = this;
 };
 
-configuredSinks.prototype.deleteSwitch = function(switchId) {
+configuredSinks.prototype.deleteSwitch = function(node) {
     var self = this;
+    if ((node == undefined) || (node.id == undefined) || (node.token == undefined) || (node.token != self.token))
+    {
+        return;
+    }
+
+    self.token += 1;
+    var configs = undefined;
+    try
+    {
+        var dat = fs.readFileSync(__dirname + '/config.json',{encoding:'utf8', flag:'r'});
+        if (dat !== '')
+        {         
+            configs = JSON.parse(dat);                   
+        }            
+    }
+    catch (err)
+    {
+        console.log(err.message);
+        self.commandRouter.broadcastToastMessage('error', 'Config Read Error', err.message);
+        return;
+    }
+
+    if (configs != undefined)
+    {
+        var switches = [];
+        configs.switches.forEach(aswitch => {
+            if (aswitch.id != node.id)
+            {
+                switches.push(aswitch);
+            }
+        });
+
+        configs.switches = switches;
+        configs.speakers.forEach(speaker => {
+            if (speaker.switch == node.id)
+            {
+                speaker.switch = -1;
+            }
+        });
+         
+        try
+        {
+            fs.writeFileSync(__dirname + '/config.json', JSON.stringify(configs));
+        } 
+        catch(err)
+        {
+            console.log(err.message);
+            self.commandRouter.broadcastToastMessage('error', 'Config Write Error', err.message);
+            return;
+        } 
+        
+        self.commandRouter.broadcastMessage('showBusy', {});
+        // New switch has been written.
+        self.pushLatest('Switch deleted!');        
+        return;
+    }
+    else
+    {
+        self.commandRouter.broadcastToastMessage('error', 'Config Read Error', 'Failed to read the config file');
+        return;
+    }
 };
 
-configuredSinks.prototype.viewSwitch = function(switchId) {
+configuredSinks.prototype.editSwitch = function(node) {
     var self = this;
+    if ((node == undefined) || (node.id == undefined) || (node.token == undefined) || (node.token != self.token))
+    {
+        return;
+    }
+
+    self.token += 1;    
+    var response = self.getUIConfig(false);
+    response.then(function(uiconf){
+        if ((node.id != undefined) && (node.id === parseInt(node.id, 10)))
+        {
+            uiconf.sections.forEach(section => {
+                if (section.id === "switches_definitions")
+                {
+                    section.inAddMode = false; 
+                    section.inEditSwitch = node.id;
+                    section.inEditMode = true;                    
+                }
+            });
+        }
+
+        self.commandRouter.broadcastMessage('pushUiConfig', uiconf);
+    });             
 };
 
-configuredSinks.prototype.editSwitch = function(switchId) {
-    var self = this;
+configuredSinks.prototype.cancelAddEdit = function(node) {
+    var self = this; 
+    if ((node == undefined) || (node.token == undefined) || (node.token != self.token))
+    {
+        return;
+    }
+
+    self.token += 1;
+    try
+    {
+        self.commandRouter.broadcastMessage('showBusy', {});
+        var response = self.getUIConfig(false);
+        response.then(function(uiconf){
+            self.commandRouter.broadcastMessage('pushUiConfig', uiconf);            
+        }).then(function(){
+            self.commandRouter.broadcastMessage('hideBusy', {});
+        });
+    }
+    catch (error)
+    {
+        console.log(error.message);
+    }              
 };
 
-configuredSinks.prototype.cancelAddEdit = function() {
-    var self = this;
+configuredSinks.prototype.refresh = function(node) {
+    var self = this; 
+    if ((node == undefined) || (node.token == undefined) || (node.token != self.token))
+    {
+        return;
+    }
+
+    self.token += 1;
+    self.commandRouter.broadcastMessage('showBusy', {}); 
+    return self.pushLatest();
+};
+
+configuredSinks.prototype.pushLatest = function(msg) {
+    var self = this; 
+    var defer = libQ.defer();   
     try
     {
         var resolve = self.getUIConfig();
         if (resolve)
         {
-            resolve.then(function(uiconf)
+            if (msg != undefined)
             {
-                self.commandRouter.broadcastMessage('pushUiConfig', uiconf);
-            });
-        }
+                resolve.then(function(uiconf)
+                {
+                    self.commandRouter.broadcastMessage('pushUiConfig', uiconf);                                
+                }).then(function()
+                {
+                    self.commandRouter.broadcastMessage('hideBusy', {});                    
+                }).then(function()
+                {                    
+                    self.commandRouter.broadcastToastMessage('success', 'Success', msg);
+                    defer.resolve();    
+                });
+            }
+            else
+            {
+                resolve.then(function(uiconf)
+                {
+                    self.commandRouter.broadcastMessage('pushUiConfig', uiconf); 
+                               
+                })
+                .then(function()
+                {
+                    self.commandRouter.broadcastMessage('hideBusy', {});
+                    defer.resolve();
+                });
+            }
+        }  
+        else
+        {
+            defer.reject(new Error());
+        }      
     }
     catch (error)
     {
-        console.log(error.message);
-    }
+        console.log(error.message);   
+        defer.reject(new Error());     
+    } 
+    
+    return defer.promise;
 };
 
-configuredSinks.prototype.addSwitch = async function(switchItem) {
+configuredSinks.prototype.addSwitch = async function(node) {
     var self = this; 
-    var uiconf = self.configuration;       
-    uiconf.sections.forEach(section => {
-        if (section.id === "switches_definitions")
-        {
-            section.inAddMode = true; 
-            section.saveNew = {
-                id:"switch_saveNew",
-                onClick:{
-                    type:'emit',
-                    message:'callMethod',
-                    data:{
-                        endpoint:'audio_interface/configured_sinks',
-                        method:'saveNewSwitch',
-                        data:{
-                            id : -1,
-                            name: "",
-                            ip:"",
-                            mac:"",
-                            enabled:false,
-                            on:false,
-                            status:-1
+    if ((node == undefined) || (node.token == undefined) || (node.token != self.token))
+    {
+        return;
+    }
+
+    self.token += 1;
+    try
+    {
+        var response = self.getUIConfig(false);
+        response.then(function(uiconf){
+            uiconf.sections.forEach(section => {
+                if (section.id === "switches_definitions")
+                {
+                    section.inAddMode = true; 
+                    section.inEditSwitch = -1;
+                    section.inEditMode = false;
+                    section.saveNew = {
+                        id:"switch_saveNew",
+                        onClick:{
+                            type:'emit',
+                            message:'callMethod',
+                            data:{
+                                endpoint:'audio_interface/configured_sinks',
+                                method:'saveNewSwitch',
+                                data:{
+                                    token: self.token,
+                                    id : -1,
+                                    name: "",
+                                    ip:"",
+                                    mac:"",
+                                    enabled:false,
+                                    on:false,
+                                    status:-1
+                                }
+                            }
                         }
-                    }
+                    }       
                 }
-            }       
-        }
-    });
-    
-    self.commandRouter.broadcastMessage('pushUiConfig', uiconf);    
+            });
+            
+            self.commandRouter.broadcastMessage('pushUiConfig', uiconf);
+        });
+    }
+    catch(error)
+    {
+        console.log(error.message);
+    }              
 };
 
 configuredSinks.prototype.saveNewSwitch = function(switchItem) {
     var self = this;
-    var errMsg = '';
-    var uiconf = self.configuration;
-    if ((switchItem.name != undefined) && (switchItem.name.trim().length >= 5) && (switchItem.name.trim().length <= 30))
-    {           
-        var matched = false;
-        uiconf.sections.forEach(section => {
-            if (section.id === "switches_definitions")
-            {
-                section.content.forEach(element => {
-                    if (element.name === switchItem.name.trim())
-                    {
-                        matched = true;
-                    }
-                });                
-            }
-        });
-
-        if (matched)
-        {
-            errMsg += 'The switch name is not unique.<br/>';
-        }
-    }
-    else
+    if ((switchItem == undefined) || (switchItem.id == undefined) || (switchItem.token == undefined) || (switchItem.token != self.token))
     {
-        errMsg += 'The switch name must be between 5 and 30 characters long.<br/>';       
-    }
-
-    if (!isIP.v4(switchItem.ip))
-    {
-        errMsg = 'The switch ip must be a valid ip v4 address.<br/>';                
-    }
-
-    var regex = /^([0-9A-F]{2}[:-]?){5}([0-9A-F]{2})$/;
-    if (!regex.test(switchItem.mac))
-    {
-        errMsg = 'The switch mac address must be a valid mac address.<br/>';
-    }
-
-    if (errMsg !== '')
-    {
-        self.commandRouter.broadcastToastMessage('error', 'Input Error', errMsg);
         return;
     }
 
-    // All checks done, the input is valid..
+    self.token += 1;    
+    var errMsg = '';
+    self.commandRouter.broadcastMessage('showBusy', {});
+    var uiconf = self.configuration; 
+    {   
+        if ((switchItem.name != undefined) && (switchItem.name.trim().length >= 5) && (switchItem.name.trim().length <= 30))
+        {           
+            var matched = false;
+            uiconf.sections.forEach(section => {
+                if (section.id === "switches_definitions")
+                {
+                    section.content.forEach(element => {
+                        if (element.name === switchItem.name.trim())
+                        {
+                            matched = true;
+                        }
+                    });                
+                }
+            });
 
+            if (matched)
+            {
+                errMsg += 'Name is not unique.<br />';
+            }
+        }
+        else
+        {
+            errMsg += 'Name must be between 5 and 30 characters.<br />';       
+        }
+
+        if (!isIP.v4(switchItem.ip.trim()))
+        {
+            errMsg += 'IP is not valid ipv4 address.<br />';                
+        }
+        else
+        {
+            var matched = false;
+            uiconf.sections.forEach(section => {
+                if (section.id === "switches_definitions")
+                {
+                    section.content.forEach(element => {
+                        if (element.ip === switchItem.ip.trim())
+                        {
+                            matched = true;
+                        }
+                    });                
+                }
+            });
+
+            if (matched)
+            {
+                errMsg += 'IP is already assigned.<br />';
+            }
+        }
+
+        var regex = /^([0-9A-Fa-f]{2}[:-]?){5}([0-9A-Fa-f]{2})$/;
+        if (!regex.test(switchItem.mac))
+        {
+            errMsg += 'MAC is not valid.<br />';
+        }
+        else{
+            var matched = false;
+            uiconf.sections.forEach(section => {
+                if (section.id === "switches_definitions")
+                {
+                    section.content.forEach(element => {
+                        if (element.mac === switchItem.mac.trim())
+                        {
+                            matched = true;
+                        }
+                    });                
+                }
+            });
+
+            if (matched)
+            {
+                errMsg += 'MAC is already assigned.<br />';
+            }
+        }
+
+        if (errMsg !== '')
+        {
+            errMsg = '<div>' + errMsg + '</div>'            
+            try
+            {
+                var response = self.getUIConfig(false);
+                response.then(function(confInfo){
+                    confInfo.sections.forEach(section => {
+                        if (section.id === "switches_definitions")
+                        {
+                            section.inAddMode = true; 
+                            section.inEditSwitch = -1;
+                            section.inEditMode = false;
+                            switchItem.token = this.token;
+                            section.saveNew = {
+                                id:"switch_saveNew",
+                                onClick:{
+                                    type:'emit',
+                                    message:'callMethod',
+                                    data:{
+                                        endpoint:'audio_interface/configured_sinks',
+                                        method:'saveNewSwitch',
+                                        data: switchItem
+                                    }
+                                }
+                            }            
+                        }
+                    });
+                    self.commandRouter.broadcastMessage('pushUiConfig', confInfo);
+                }).then(function(){
+                    self.commandRouter.broadcastMessage('hideBusy', {});
+                    self.commandRouter.broadcastToastMessage('error', 'Input Error', errMsg);
+                });
+            }
+            catch(error)
+            {
+                self.commandRouter.broadcastMessage('hideBusy', {});
+                console.log(error.message);
+            }
+            
+            return;
+        }
+    }
+
+    // All checks done, the input is valid..
+    var configs = undefined;
+    try
+    {
+        var dat = fs.readFileSync(__dirname + '/config.json',{encoding:'utf8', flag:'r'});
+        if (dat !== '')
+        {         
+            configs = JSON.parse(dat);                   
+        }            
+    }
+    catch (err)
+    {
+        console.log(err.message);
+        self.commandRouter.broadcastMessage('hideBusy', {});
+        self.commandRouter.broadcastToastMessage('error', 'Config Read Error', err.message);
+        return;
+    }
+
+    if (configs != undefined)
+    {
+        switchItem.id = configs.indices.switches;
+        configs.indices.switches += 1;
+
+        switchItem.name = switchItem.name.trim();
+        switchItem.ip = switchItem.ip.trim();
+        switchItem.mac = switchItem.mac.trim();
+        var sw = {
+            id : switchItem.id,
+            name: switchItem.name,
+            ip: switchItem.ip,
+            mac: switchItem.mac,
+            enabled: false,
+            on: false,
+            status: -1
+        };
+
+        configs.switches.push(sw);    
+        try
+        {
+            fs.writeFileSync(__dirname + '/config.json', JSON.stringify(configs));
+        } 
+        catch(err)
+        {
+            console.log(err.message);
+            self.commandRouter.broadcastMessage('hideBusy', {});
+            self.commandRouter.broadcastToastMessage('error', 'Config Write Error', err.message);
+            return;
+        } 
+        
+        // New switch has been written.
+        self.pushLatest('New switch added!');        
+        return;
+    }
+    else
+    {
+        self.commandRouter.broadcastToastMessage('error', 'Config Read Error', 'Failed to read the config file');
+        return;
+    }
 };
 
-configuredSinks.prototype.saveSwitch = function(switchId) {
+configuredSinks.prototype.saveSwitch = function(switchItem) {
     var self = this;
+    if ((switchItem == undefined) || (switchItem.id == undefined) || (switchItem.token == undefined) || (switchItem.token != self.token))
+    {
+        return;
+    }
+
+    self.token += 1; 
+    self.commandRouter.broadcastMessage('showBusy', {});
+    var errMsg = '';
+    var uiconf = self.configuration; 
+    {   
+        if ((switchItem.name != undefined) && (switchItem.name.trim().length >= 5) && (switchItem.name.trim().length <= 30))
+        {           
+            var matched = false;
+            uiconf.sections.forEach(section => {
+                if (section.id === "switches_definitions")
+                {
+                    section.content.forEach(element => {
+                        if ((element.name === switchItem.name.trim()) && (element.id != switchItem.id))
+                        {
+                            matched = true;
+                        }
+                    });                
+                }
+            });
+
+            if (matched)
+            {
+                errMsg += 'Name is not unique.<br />';
+            }
+        }
+        else
+        {
+            errMsg += 'Name must be between 5 and 30 characters.<br />';       
+        }
+
+        if (!isIP.v4(switchItem.ip.trim()))
+        {
+            errMsg += 'IP is not valid ipv4 address.<br />';                
+        }
+        else
+        {
+            var matched = false;
+            uiconf.sections.forEach(section => {
+                if (section.id === "switches_definitions")
+                {
+                    section.content.forEach(element => {
+                        if ((element.ip === switchItem.ip.trim()) && (element.id != switchItem.id))
+                        {
+                            matched = true;
+                        }
+                    });                
+                }
+            });
+
+            if (matched)
+            {
+                errMsg += 'IP is already assigned.<br />';
+            }
+        }
+
+        var regex = /^([0-9A-Fa-f]{2}[:-]?){5}([0-9A-Fa-f]{2})$/;
+        if (!regex.test(switchItem.mac))
+        {
+            errMsg += 'MAC is not valid.<br />';
+        }
+        else{
+            var matched = false;
+            uiconf.sections.forEach(section => {
+                if (section.id === "switches_definitions")
+                {
+                    section.content.forEach(element => {
+                        if ((element.mac === switchItem.mac.trim()) && (element.id != switchItem.id))
+                        {
+                            matched = true;
+                        }
+                    });                
+                }
+            });
+
+            if (matched)
+            {
+                errMsg += 'MAC is already assigned.<br />';
+            }
+        }
+
+        if (errMsg !== '')
+        {
+            errMsg = '<div>' + errMsg + '</div>'
+            try
+            {
+                var response = self.getUIConfig(false);
+                response.then(function(confInfo){
+                    confInfo.sections.forEach(section => {
+                        if (section.id === "switches_definitions")
+                        {
+                            section.inAddMode = false; 
+                            section.inEditSwitch = switchItem.id;
+                            section.inEditMode = true;
+                            switchItem.token = this.token;
+                            section.content.forEach(aswitch =>{
+                                if (aswitch.id == switchItem.id)
+                                {
+                                    aswitch.save.onClick.data.data = switchItem;
+                                }
+                            });
+                        }
+                    });
+                    self.commandRouter.broadcastMessage('pushUiConfig', confInfo);
+                }).then(function(){
+                    self.commandRouter.broadcastMessage('hideBusy', {});
+                    self.commandRouter.broadcastToastMessage('error', 'Input Error', errMsg);
+                });
+            }
+            catch(error)
+            {
+                self.commandRouter.broadcastMessage('hideBusy', {});
+                console.log(error.message);
+            }
+
+            return;
+        }
+    }
+    
+    // All checks done, the input is valid..
+    var configs = undefined;
+    try
+    {
+        var dat = fs.readFileSync(__dirname + '/config.json',{encoding:'utf8', flag:'r'});
+        if (dat !== '')
+        {         
+            configs = JSON.parse(dat);                   
+        }            
+    }
+    catch (err)
+    {
+        console.log(err.message);
+        self.commandRouter.broadcastMessage('hideBusy', {});
+        self.commandRouter.broadcastToastMessage('error', 'Config Read Error', err.message);
+        return;
+    }
+
+    if (configs != undefined)
+    {
+        configs.switches.forEach(aswitch => {
+            if (aswitch.id == switchItem.id)
+            {
+                aswitch.name = switchItem.name.trim();
+                aswitch.ip = switchItem.ip.trim();
+                aswitch.mac = switchItem.mac.trim();
+                aswitch.enabled = switchItem.enabled;
+            }
+        });
+         
+        try
+        {
+            fs.writeFileSync(__dirname + '/config.json', JSON.stringify(configs));
+        } 
+        catch(err)
+        {
+            console.log(err.message);
+            self.commandRouter.broadcastMessage('hideBusy', {});
+            self.commandRouter.broadcastToastMessage('error', 'Config Write Error', err.message);
+            return;
+        } 
+        
+        // New switch has been written.
+        self.pushLatest('Switch Saved!');        
+        return;
+    }
+    else
+    {
+        self.commandRouter.broadcastToastMessage('error', 'Config Read Error', 'Failed to read the config file');
+        return;
+    }
 };
 
 
